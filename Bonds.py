@@ -153,16 +153,66 @@ def stress_test_bond(face, coupon_rate, ytm, maturity, shocks):
         ]
     )
 
-shocks = [-0.02, -0.01, 0, 0.01, 0.02]
+shocks = [i / 200 for i in range(-10, 11)]
 
-result = stress_test_bond(
-    FACE,
-    0.0717,
-    0.0620,
-    2,
-    shocks
+import matplotlib.pyplot as plt
+
+os.makedirs("plots", exist_ok=True)
+
+all_results = []
+
+for _, bond in bonds.iterrows():
+
+    result = stress_test_bond(
+        FACE,
+        bond["Coupon"],
+        bond["YTM"],
+        bond["Years"],
+        shocks
+    )
+
+    result["Bond"] = bond["Bond"]
+    result["YTM (%)"] = (bond["YTM"] + result["Shock"]) * 100
+
+    result = result[
+        [
+            "Bond",
+            "Shock",
+            "YTM (%)",
+            "Price",
+            "Duration",
+            "Modified Duration",
+            "DV01",
+            "Convexity"
+        ]
+    ]
+
+    all_results.append(result)
+
+    plt.figure(figsize=(8,5))
+    plt.plot(result["YTM (%)"], result["Price"], marker="o")
+
+    plt.title(f'{bond["Bond"]} - Price vs YTM')
+    plt.xlabel("Yield to Maturity (%)")
+    plt.ylabel("Bond Price")
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.savefig(
+    f'plots/{bond["Bond"].replace(" ", "_")}_Price_vs_YTM.png',
+    dpi=300,
+    bbox_inches="tight"
+)
+    plt.show()
+    plt.close()
+
+final_results = pd.concat(all_results, ignore_index=True)
+
+print(final_results)
+
+final_results.to_excel(
+    "Bond_Stress_Test_Results.xlsx",
+    index=False
 )
 
-print(result)
-
-
+print("Results saved to Bond_Stress_Test_Results.xlsx")
